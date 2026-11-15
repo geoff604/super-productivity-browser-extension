@@ -18,18 +18,18 @@ chrome.runtime.onInstalled.addListener(() => {
     title: "Add to Super Productivity",
     contexts: ["page", "link", "selection"]
   });
-  ensureOriginRule().catch((error) => setActionFeedback(false, error.message));
+  ensureOriginRule().catch((error) => setGlobalFeedback(false, error.message));
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  ensureOriginRule().catch((error) => setActionFeedback(false, error.message));
+  ensureOriginRule().catch((error) => setGlobalFeedback(false, error.message));
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== MENU_ID) return;
 
   createTaskFromContext(info, tab).catch((error) => {
-    setActionFeedback(false, getErrorMessage(error), tab?.id);
+    setTabFeedback(tab?.id, false, getErrorMessage(error));
   });
 });
 
@@ -54,8 +54,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === "CREATE_TASK" && isTaskInput(message.task)) {
     createTask(message.task)
-      .then((data) => sendResponse({ ok: true, data }))
-      .catch((error) => sendResponse({ ok: false, error: serializeError(error) }));
+      .then((data) => {
+        setTabFeedback(message.tabId, true, "Task added to Super Productivity.");
+        sendResponse({ ok: true, data });
+      })
+      .catch((error) => {
+        setTabFeedback(message.tabId, false, getErrorMessage(error));
+        sendResponse({ ok: false, error: serializeError(error) });
+      });
     return true;
   }
 
@@ -78,7 +84,7 @@ async function createTaskFromContext(info, tab) {
     projectId: settings.defaultProjectId || ""
   };
   await createTask(task);
-  setActionFeedback(true, "Task added to Super Productivity.", tab?.id);
+  setTabFeedback(tab?.id, true, "Task added to Super Productivity.");
 }
 
 async function createTask(taskInput) {
@@ -206,11 +212,17 @@ function isTaskInput(task) {
     typeof task.projectId === "string";
 }
 
-function setActionFeedback(success, message, tabId) {
-  const target = tabId !== undefined ? { tabId } : {};
-  chrome.action.setBadgeBackgroundColor({ ...target, color: success ? "#188038" : "#b3261e" });
-  chrome.action.setBadgeText({ ...target, text: success ? "OK" : "ERR" });
-  chrome.action.setTitle({ ...target, title: message });
+function setTabFeedback(tabId, success, message) {
+  if (!Number.isInteger(tabId)) return;
+  chrome.action.setBadgeBackgroundColor({ tabId, color: success ? "#188038" : "#b3261e" });
+  chrome.action.setBadgeText({ tabId, text: success ? "OK" : "ERR" });
+  chrome.action.setTitle({ tabId, title: message });
+}
+
+function setGlobalFeedback(success, message) {
+  chrome.action.setBadgeBackgroundColor({ color: success ? "#188038" : "#b3261e" });
+  chrome.action.setBadgeText({ text: success ? "OK" : "ERR" });
+  chrome.action.setTitle({ title: message });
 }
 
 function serializeError(error) {

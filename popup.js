@@ -8,6 +8,7 @@ const statusOutput = document.getElementById("status");
 
 let pageTitle = "";
 let pageUrl = "";
+let activeTabId;
 
 initialize().catch((error) => showError(formatError(error)));
 
@@ -27,6 +28,7 @@ submitButton.addEventListener("click", submitTask);
 
 async function initialize() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  activeTabId = tab?.id;
   pageTitle = tab?.title || tab?.url || "";
   pageUrl = tab?.url || "";
   titleInput.value = pageTitle;
@@ -77,6 +79,7 @@ async function submitTask() {
   try {
     const result = await sendMessage({
       type: "CREATE_TASK",
+      tabId: activeTabId,
       task: {
         title,
         url: pageUrl,
