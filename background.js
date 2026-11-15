@@ -29,7 +29,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== MENU_ID) return;
 
   createTaskFromContext(info, tab).catch((error) => {
-    setActionFeedback(false, getErrorMessage(error));
+    setActionFeedback(false, getErrorMessage(error), tab?.id);
   });
 });
 
@@ -78,7 +78,7 @@ async function createTaskFromContext(info, tab) {
     projectId: settings.defaultProjectId || ""
   };
   await createTask(task);
-  setActionFeedback(true, "Task added to Super Productivity.");
+  setActionFeedback(true, "Task added to Super Productivity.", tab?.id);
 }
 
 async function createTask(taskInput) {
@@ -206,10 +206,11 @@ function isTaskInput(task) {
     typeof task.projectId === "string";
 }
 
-function setActionFeedback(success, message) {
-  chrome.action.setBadgeBackgroundColor({ color: success ? "#188038" : "#b3261e" });
-  chrome.action.setBadgeText({ text: success ? "OK" : "ERR" });
-  chrome.action.setTitle({ title: message });
+function setActionFeedback(success, message, tabId) {
+  const target = tabId !== undefined ? { tabId } : {};
+  chrome.action.setBadgeBackgroundColor({ ...target, color: success ? "#188038" : "#b3261e" });
+  chrome.action.setBadgeText({ ...target, text: success ? "OK" : "ERR" });
+  chrome.action.setTitle({ ...target, title: message });
 }
 
 function serializeError(error) {
