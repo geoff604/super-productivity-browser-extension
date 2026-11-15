@@ -51,18 +51,35 @@ async function initialize() {
   }
 
   const settings = await chrome.storage.local.get(["defaultProjectId"]);
-  if (settings.defaultProjectId) {
-    const option = document.createElement("option");
-    option.value = settings.defaultProjectId;
-    option.textContent = `Default project (${settings.defaultProjectId})`;
-    option.selected = true;
-    projectSelect.append(option);
-  }
 
   const projects = await sendMessage({ type: "GET_PROJECTS" });
   if (!projects.ok) {
     showError(formatError(projects.error));
     return;
+  }
+  fillProjects(projects.data, settings.defaultProjectId);
+}
+
+function fillProjects(projects, defaultProjectId) {
+  const visible = (Array.isArray(projects) ? projects : [])
+    .filter((project) => project && !project.isArchived && !project.isHiddenFromMenu && !project.isDone);
+
+  for (const project of visible) {
+    const option = document.createElement("option");
+    option.value = project.id;
+    option.textContent = project.title || "";
+    projectSelect.append(option);
+  }
+
+  if (!defaultProjectId) return;
+  if (visible.some((project) => String(project.id) === String(defaultProjectId))) {
+    projectSelect.value = defaultProjectId;
+  } else {
+    const option = document.createElement("option");
+    option.value = defaultProjectId;
+    option.textContent = `Default project (${defaultProjectId})`;
+    option.selected = true;
+    projectSelect.append(option);
   }
 }
 
