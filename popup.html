@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Add to Super Productivity</title>
+    <style>
+      body { width: 360px; margin: 0; padding: 16px; font: 14px Arial, sans-serif; color: #202124; }
+      label, legend { display: block; margin: 12px 0 5px; font-weight: 600; }
+      input, textarea, select, button { box-sizing: border-box; width: 100%; font: inherit; }
+      input, textarea, select { padding: 8px; border: 1px solid #9aa0a6; border-radius: 4px; }
+      textarea { min-height: 90px; resize: vertical; }
+      .url { overflow-wrap: anywhere; color: #5f6368; }
+      fieldset { border: 0; padding: 0; margin: 12px 0; }
+      .choice { display: flex; align-items: center; gap: 7px; font-weight: normal; margin: 5px 0; }
+      .choice input { width: auto; }
+      button { margin-top: 16px; padding: 9px; border: 0; border-radius: 4px; background: #1967d2; color: white; cursor: pointer; }
+      button:disabled { opacity: .6; cursor: wait; }
+      #status { min-height: 18px; margin-top: 10px; white-space: pre-wrap; }
+      #projectNote { color: #5f6368; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <h1>Add to Super Productivity</h1>
+    <label for="title">Task title</label>
+    <input id="title" type="text" required>
+
+    <div>
+      <label>Page URL</label>
+      <div id="url" class="url"></div>
+    </div>
+
+    <fieldset>
+      <legend>Title source</legend>
+      <label class="choice"><input type="radio" name="titleSource" value="page" checked> Page title</label>
+      <label class="choice"><input type="radio" name="titleSource" value="selection" disabled> Selected text</label>
+    </fieldset>
+
+    <label for="selection">Selected text</label>
+    <textarea id="selection" placeholder="No selected text available"></textarea>
+
+    <label for="project">Project</label>
+    <select id="project">
+      <option value="">No project</option>
+    </select>
+    <div id="projectNote">Project fields cannot be displayed until the API's response shape is documented. You can set a default project ID in Options.</div>
+
+    <button id="submit" type="button">Add to Super Productivity</button>
+    <div id="status" role="status" aria-live="polite"></div>
+    <script src="popup.js"></script>
+  </body>
+</html>

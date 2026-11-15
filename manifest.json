@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Super Productivity Page Clipper",
+  "version": "1.0.0",
+  "description": "Clip the current page into Super Productivity.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "contextMenus",
+    "storage",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:3876/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Add page to Super Productivity",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y"
+      },
+      "description": "Open the page clipper"
+    }
+  }
+}
