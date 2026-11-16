@@ -1,5 +1,4 @@
 const tokenInput = document.getElementById("token");
-const defaultProjectInput = document.getElementById("defaultProjectId");
 const saveButton = document.getElementById("save");
 const testButton = document.getElementById("test");
 const statusOutput = document.getElementById("status");
@@ -9,15 +8,13 @@ saveButton.addEventListener("click", saveSettings);
 testButton.addEventListener("click", testConnection);
 
 async function loadSettings() {
-  const settings = await chrome.storage.local.get(["accessToken", "defaultProjectId"]);
+  const settings = await chrome.storage.local.get(["accessToken"]);
   tokenInput.value = settings.accessToken || "";
-  defaultProjectInput.value = settings.defaultProjectId || "";
 }
 
 async function saveSettings() {
   await chrome.storage.local.set({
-    accessToken: tokenInput.value.trim(),
-    defaultProjectId: defaultProjectInput.value.trim()
+    accessToken: tokenInput.value.trim()
   });
   showStatus("Settings saved locally.", true);
 }

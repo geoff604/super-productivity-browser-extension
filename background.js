@@ -83,12 +83,10 @@ async function createTaskFromContext(info, tab) {
   }
 
   const selection = typeof info.selectionText === "string" ? info.selectionText.trim() : "";
-  const settings = await chrome.storage.local.get(["accessToken", "defaultProjectId"]);
   const task = {
     title: selection || title,
     url: pageUrl,
-    selectedText: selection,
-    projectId: settings.defaultProjectId || ""
+    selectedText: selection
   };
   await createTask(task);
   setTabFeedback(tab?.id, true, "Task added to Super Productivity.");

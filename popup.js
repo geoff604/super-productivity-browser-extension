@@ -3,13 +3,17 @@ const urlOutput = document.getElementById("url");
 const selectionInput = document.getElementById("selection");
 const selectionChoice = document.querySelector('input[name="titleSource"][value="selection"]');
 const projectSelect = document.getElementById("project");
-const tagsContainer = document.getElementById("tags");
+const tagSearch = document.getElementById("tagSearch");
+const tagList = document.getElementById("tagList");
+const tagChips = document.getElementById("tagChips");
 const submitButton = document.getElementById("submit");
 const statusOutput = document.getElementById("status");
 
 let pageTitle = "";
 let pageUrl = "";
 let activeTabId;
+let allTags = [];
+const selectedTagIds = new Set();
 
 initialize().catch((error) => showError(formatError(error)));
 
@@ -26,6 +30,7 @@ selectionInput.addEventListener("input", () => {
 });
 
 submitButton.addEventListener("click", submitTask);
+tagSearch.addEventListener("input", renderTags);
 
 async function initialize() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -51,18 +56,16 @@ async function initialize() {
     selectionChoice.disabled = true;
   }
 
-  const settings = await chrome.storage.local.get(["defaultProjectId"]);
-
   const projects = await sendMessage({ type: "GET_PROJECTS" });
   if (!projects.ok) {
     showError(formatError(projects.error));
     return;
   }
-  fillProjects(projects.data, settings.defaultProjectId);
+  fillProjects(projects.data);
   await loadTags();
 }
 
-function fillProjects(projects, defaultProjectId) {
+function fillProjects(projects) {
   const visible = (Array.isArray(projects) ? projects : [])
     .filter((project) => project && !project.isArchived && !project.isHiddenFromMenu && !project.isDone);
 
@@ -70,17 +73,6 @@ function fillProjects(projects, defaultProjectId) {
     const option = document.createElement("option");
     option.value = project.id;
     option.textContent = project.title || "";
-    projectSelect.append(option);
-  }
-
-  if (!defaultProjectId) return;
-  if (visible.some((project) => String(project.id) === String(defaultProjectId))) {
-    projectSelect.value = defaultProjectId;
-  } else {
-    const option = document.createElement("option");
-    option.value = defaultProjectId;
-    option.textContent = `Default project (${defaultProjectId})`;
-    option.selected = true;
     projectSelect.append(option);
   }
 }
@@ -91,26 +83,73 @@ async function loadTags() {
     if (!result.ok) throw result.error;
     fillTags(result.data);
   } catch (error) {
-    tagsContainer.textContent = formatError(error);
+    tagList.textContent = formatError(error);
   }
 }
 
 function fillTags(tags) {
-  const list = (Array.isArray(tags) ? tags : []).filter((tag) => tag && tag.id);
-  if (!list.length) {
-    tagsContainer.textContent = "No tags available.";
+  allTags = (Array.isArray(tags) ? tags : []).filter((tag) => tag && tag.id);
+  renderTags();
+}
+
+function renderTags() {
+  tagList.textContent = "";
+  if (!allTags.length) {
+    tagList.textContent = "No tags available.";
     return;
   }
 
-  for (const tag of list) {
+  const query = tagSearch.value.trim().toLowerCase();
+  const matches = allTags.filter((tag) => tagTitle(tag).toLowerCase().includes(query));
+  if (!matches.length) {
+    tagList.textContent = "No tags match.";
+    return;
+  }
+
+  for (const tag of matches) {
     const label = document.createElement("label");
     label.className = "choice";
     const box = document.createElement("input");
     box.type = "checkbox";
     box.value = tag.id;
-    label.append(box, tag.title || tag.id);
-    tagsContainer.append(label);
+    box.checked = selectedTagIds.has(tag.id);
+    box.addEventListener("change", () => {
+      if (box.checked) selectedTagIds.add(tag.id);
+      else selectedTagIds.delete(tag.id);
+      renderChips();
+    });
+    label.append(box, tagTitle(tag));
+    tagList.append(label);
   }
+}
+
+function renderChips() {
+  tagChips.textContent = "";
+  for (const id of selectedTagIds) {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "\u00d7";
+    remove.setAttribute("aria-label", `Remove tag ${findTagTitle(id)}`);
+    remove.addEventListener("click", () => {
+      selectedTagIds.delete(id);
+      renderChips();
+      const box = tagList.querySelector(`input[value="${CSS.escape(id)}"]`);
+      if (box) box.checked = false;
+    });
+    chip.append(findTagTitle(id), remove);
+    tagChips.append(chip);
+  }
+}
+
+function tagTitle(tag) {
+  return tag.title || tag.id;
+}
+
+function findTagTitle(id) {
+  const tag = allTags.find((item) => item.id === id);
+  return tag ? tagTitle(tag) : id;
 }
 
 async function submitTask() {
@@ -123,8 +162,7 @@ async function submitTask() {
 
   setBusy(true);
   statusOutput.textContent = "";
-  const tagIds = [...tagsContainer.querySelectorAll('input[type="checkbox"]:checked')]
-    .map((box) => box.value);
+  const tagIds = [...selectedTagIds];
   try {
     const result = await sendMessage({
       type: "CREATE_TASK",
