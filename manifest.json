@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Page Clipper for Super Productivity",
+  "name": "Website to Task for Super Productivity",
   "version": "1.0.0",
-  "description": "Unofficial. Clip the current page into the Super Productivity desktop app.",
+  "description": "Unofficial. Adds the current website as a task in the Super Productivity app.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
