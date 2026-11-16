@@ -47,7 +47,7 @@ The page title and selected text are only ever sent to the app on your own compu
 
 ## Why the extension changes a request header
 
-The app's local API rejects requests that carry a browser `Origin` header. To make its own requests work, the extension removes only that `Origin` header, and only for requests it makes to `http://127.0.0.1:3876/`. Nothing else about the request is changed, and the rule applies to this extension only.
+The extension uses the `declarativeNetRequestWithHostAccess` permission for a narrow header rule. The app's API rejects browser requests with an `Origin` header, so the extension removes only the `Origin` header, and only for its own requests to `http://127.0.0.1:3876/`. Nothing else about the request is changed, and the rule applies to this extension only.
 
 ## Known limits
 

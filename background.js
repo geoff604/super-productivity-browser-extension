@@ -3,7 +3,7 @@
 // scripting reads selected text from that granted tab; no content script makes network requests.
 // contextMenus adds the requested page, link, and selection menu item.
 // storage reads the locally saved access token.
-// declarativeNetRequest removes Origin only from this extension's API requests, which the app rejects otherwise.
+// declarativeNetRequestWithHostAccess removes Origin only from this extension's API requests, which the app rejects otherwise.
 // host_permissions is limited to the Super Productivity loopback REST API.
 
 const API_BASE = "http://127.0.0.1:3876";

@@ -61,7 +61,7 @@ What Super Productivity does with a task after it is saved, including any sync y
 | `scripting` | Read the text you have selected on the page. |
 | `contextMenus` | Add the **Add to Super Productivity** right-click item, which appears for pages, links, and selections. |
 | `storage` | Save your access token locally. |
-| `declarativeNetRequest` | Remove the `Origin` header from this extension's own requests to the local API. |
+| `declarativeNetRequestWithHostAccess` | Remove the `Origin` header from this extension's own requests to the local API. |
 | Host: `http://127.0.0.1:3876/*` | Talk to the local API and nothing else. |
 
 ## Changes to this policy
