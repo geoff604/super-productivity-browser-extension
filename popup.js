@@ -3,6 +3,7 @@ const urlOutput = document.getElementById("url");
 const selectionInput = document.getElementById("selection");
 const selectionChoice = document.querySelector('input[name="titleSource"][value="selection"]');
 const projectSelect = document.getElementById("project");
+const tagsContainer = document.getElementById("tags");
 const submitButton = document.getElementById("submit");
 const statusOutput = document.getElementById("status");
 
@@ -58,6 +59,7 @@ async function initialize() {
     return;
   }
   fillProjects(projects.data, settings.defaultProjectId);
+  await loadTags();
 }
 
 function fillProjects(projects, defaultProjectId) {
@@ -83,6 +85,34 @@ function fillProjects(projects, defaultProjectId) {
   }
 }
 
+async function loadTags() {
+  try {
+    const result = await sendMessage({ type: "GET_TAGS" });
+    if (!result.ok) throw result.error;
+    fillTags(result.data);
+  } catch (error) {
+    tagsContainer.textContent = formatError(error);
+  }
+}
+
+function fillTags(tags) {
+  const list = (Array.isArray(tags) ? tags : []).filter((tag) => tag && tag.id);
+  if (!list.length) {
+    tagsContainer.textContent = "No tags available.";
+    return;
+  }
+
+  for (const tag of list) {
+    const label = document.createElement("label");
+    label.className = "choice";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.value = tag.id;
+    label.append(box, tag.title || tag.id);
+    tagsContainer.append(label);
+  }
+}
+
 async function submitTask() {
   const title = titleInput.value.trim();
   if (!title) {
@@ -93,6 +123,8 @@ async function submitTask() {
 
   setBusy(true);
   statusOutput.textContent = "";
+  const tagIds = [...tagsContainer.querySelectorAll('input[type="checkbox"]:checked')]
+    .map((box) => box.value);
   try {
     const result = await sendMessage({
       type: "CREATE_TASK",
@@ -101,7 +133,8 @@ async function submitTask() {
         title,
         url: pageUrl,
         selectedText: selectionInput.value.trim(),
-        projectId: projectSelect.value
+        projectId: projectSelect.value,
+        tagIds
       }
     });
     if (!result.ok) throw result.error;

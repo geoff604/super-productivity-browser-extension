@@ -45,6 +45,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === "GET_TAGS") {
+    getTags()
+      .then((result) => sendResponse({ ok: true, data: result }))
+      .catch((error) => sendResponse({ ok: false, error: serializeError(error) }));
+    return true;
+  }
+
   if (message?.type === "TEST_CONNECTION") {
     testConnection()
       .then(sendResponse)
@@ -96,6 +103,9 @@ async function createTask(taskInput) {
   };
 
   if (taskInput.projectId) body.projectId = taskInput.projectId;
+  if (Array.isArray(taskInput.tagIds) && taskInput.tagIds.length > 0) {
+    body.tagIds = taskInput.tagIds;
+  }
 
   return apiRequest("/tasks", {
     method: "POST",
@@ -107,6 +117,11 @@ async function createTask(taskInput) {
 async function getProjects() {
   const settings = await chrome.storage.local.get(["accessToken"]);
   return apiRequest("/projects", { token: settings.accessToken || "" });
+}
+
+async function getTags() {
+  const settings = await chrome.storage.local.get(["accessToken"]);
+  return apiRequest("/tags", { token: settings.accessToken || "" });
 }
 
 async function testConnection() {
