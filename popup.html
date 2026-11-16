@@ -11,20 +11,24 @@
       input, textarea, select, button { box-sizing: border-box; width: 100%; font: inherit; }
       input, textarea, select { padding: 8px; border: 1px solid #9aa0a6; border-radius: 4px; }
       textarea { min-height: 52px; resize: vertical; }
-      .url { overflow-wrap: anywhere; color: #5f6368; }
+      .url { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: #5f6368; }
       fieldset { border: 0; padding: 0; margin: 6px 0; }
       .choice { display: flex; align-items: center; gap: 7px; font-weight: normal; margin: 2px 0; }
       .choice input { width: auto; }
       button { margin-top: 8px; padding: 9px; border: 0; border-radius: 4px; background: #1967d2; color: white; cursor: pointer; }
       button:disabled { opacity: .6; cursor: wait; }
       #status { min-height: 16px; margin-top: 4px; white-space: pre-wrap; }
-      #tagChips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; max-height: 76px; overflow-y: auto; }
+      #tagChips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; max-height: 48px; overflow-y: auto; }
       #tagChips:empty { display: none; }
       .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 4px 3px 8px; background: #e8f0fe; color: #174ea6; border-radius: 12px; font-size: 12px; }
       .chip button { width: auto; margin: 0; padding: 0 6px; border: 0; background: transparent; color: inherit; font-size: 14px; line-height: 1; cursor: pointer; }
       .chip button:hover { background: #d2e3fc; }
-      #tagSearch { margin-bottom: 4px; }
-      #tagList { max-height: 96px; overflow-y: auto; border: 1px solid #9aa0a6; border-radius: 4px; padding: 4px 8px; }
+      .tag-input { position: relative; }
+      #tagList { position: absolute; bottom: calc(100% + 2px); left: 0; right: 0; z-index: 1; max-height: 168px; overflow-y: auto; border: 1px solid #9aa0a6; border-radius: 4px; background: #fff; box-shadow: 0 2px 8px rgba(32, 33, 36, .2); }
+      #tagList[hidden] { display: none; }
+      #tagList .choice { margin: 0; padding: 5px 8px; border-radius: 2px; }
+      #tagList .choice:hover, #tagList .choice.active { background: #e8f0fe; }
+      #tagList .empty { padding: 6px 8px; color: #5f6368; }
     </style>
   </head>
   <body>
@@ -54,8 +58,11 @@
     <fieldset>
       <legend>Tags</legend>
       <div id="tagChips"></div>
-      <input id="tagSearch" type="text" placeholder="Filter tags" autocomplete="off">
-      <div id="tagList"></div>
+      <div class="tag-input">
+        <input id="tagSearch" type="text" placeholder="Type a tag name" autocomplete="off"
+               role="combobox" aria-expanded="false" aria-controls="tagList" aria-autocomplete="list">
+        <div id="tagList" role="listbox" aria-label="Tags" hidden></div>
+      </div>
     </fieldset>
 
     <button id="submit" type="button">Add to Super Productivity</button>

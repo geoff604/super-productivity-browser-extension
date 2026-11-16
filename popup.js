@@ -14,6 +14,10 @@ let pageUrl = "";
 let activeTabId;
 let allTags = [];
 const selectedTagIds = new Set();
+let visibleTags = [];
+let activeTagIndex = -1;
+let tagsLoaded = false;
+let tagLoadError = "";
 
 initialize().catch((error) => showError(formatError(error)));
 
@@ -36,7 +40,13 @@ titleInput.addEventListener("keydown", (event) => {
     submitTask();
   }
 });
-tagSearch.addEventListener("input", renderTags);
+tagSearch.addEventListener("focus", openTagList);
+tagSearch.addEventListener("input", () => {
+  activeTagIndex = -1;
+  openTagList();
+});
+tagSearch.addEventListener("keydown", onTagSearchKeydown);
+tagSearch.addEventListener("blur", closeTagList);
 
 async function initialize() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -92,44 +102,147 @@ async function loadTags() {
     if (!result.ok) throw result.error;
     fillTags(result.data);
   } catch (error) {
-    tagList.textContent = formatError(error);
+    tagLoadError = formatError(error);
+  } finally {
+    tagsLoaded = true;
+    if (!tagList.hidden) buildTagOptions();
   }
 }
 
 function fillTags(tags) {
   allTags = (Array.isArray(tags) ? tags : []).filter((tag) => tag && tag.id);
-  renderTags();
+  if (!tagList.hidden) buildTagOptions();
 }
 
-function renderTags() {
+function tagQuery() {
+  return tagSearch.value.trim().replace(/^#+/, "").trim();
+}
+
+function openTagList() {
+  if (tagList.hidden) {
+    tagList.hidden = false;
+    tagSearch.setAttribute("aria-expanded", "true");
+  }
+  buildTagOptions();
+}
+
+function closeTagList() {
+  if (!tagList.hidden) {
+    tagList.hidden = true;
+    tagSearch.setAttribute("aria-expanded", "false");
+  }
+  activeTagIndex = -1;
+  tagSearch.removeAttribute("aria-activedescendant");
+}
+
+function buildTagOptions() {
+  const query = tagQuery();
   tagList.textContent = "";
-  if (!allTags.length) {
-    tagList.textContent = "No tags available.";
+  tagSearch.removeAttribute("aria-activedescendant");
+  visibleTags = [];
+
+  if (!tagsLoaded) {
+    appendTagNote("Loading tags...");
     return;
   }
 
-  const query = tagSearch.value.trim().toLowerCase();
-  const matches = allTags.filter((tag) => tagTitle(tag).toLowerCase().includes(query));
-  if (!matches.length) {
-    tagList.textContent = "No tags match.";
+  if (tagLoadError) {
+    appendTagNote(tagLoadError);
     return;
   }
 
-  for (const tag of matches) {
-    const label = document.createElement("label");
-    label.className = "choice";
-    const box = document.createElement("input");
-    box.type = "checkbox";
-    box.value = tag.id;
-    box.checked = selectedTagIds.has(tag.id);
-    box.addEventListener("change", () => {
-      if (box.checked) selectedTagIds.add(tag.id);
-      else selectedTagIds.delete(tag.id);
-      renderChips();
+  visibleTags = allTags
+    .filter((tag) => !selectedTagIds.has(tag.id))
+    .filter((tag) => !query || tagTitle(tag).toLowerCase().includes(query.toLowerCase()))
+    .slice(0, 6);
+
+  if (activeTagIndex >= visibleTags.length) activeTagIndex = visibleTags.length - 1;
+
+  if (!visibleTags.length) {
+    if (query) appendTagNote(`No tag named #${query}. Create it in Super Productivity first.`);
+    else if (allTags.length) appendTagNote("Every tag is already selected.");
+    else appendTagNote("No tags in Super Productivity yet.");
+    return;
+  }
+
+  visibleTags.forEach((tag, index) => {
+    const option = document.createElement("div");
+    option.id = `tag-option-${index}`;
+    option.className = index === activeTagIndex ? "choice active" : "choice";
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", String(index === activeTagIndex));
+    option.textContent = `# ${tagTitle(tag)}`;
+    option.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      selectTag(tag.id);
     });
-    label.append(box, tagTitle(tag));
-    tagList.append(label);
+    tagList.append(option);
+    if (index === activeTagIndex) {
+      tagSearch.setAttribute("aria-activedescendant", option.id);
+    }
+  });
+}
+
+function appendTagNote(text) {
+  const note = document.createElement("div");
+  note.className = "empty";
+  note.textContent = text;
+  tagList.append(note);
+}
+
+function onTagSearchKeydown(event) {
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    if (tagList.hidden) {
+      openTagList();
+      return;
+    }
+    if (!visibleTags.length) return;
+    const step = event.key === "ArrowDown" ? 1 : -1;
+    if (activeTagIndex < 0) {
+      activeTagIndex = event.key === "ArrowDown" ? 0 : visibleTags.length - 1;
+    } else {
+      activeTagIndex = (activeTagIndex + step + visibleTags.length) % visibleTags.length;
+    }
+    buildTagOptions();
+    return;
   }
+
+  if (event.key === "Enter" && !event.isComposing) {
+    if (tagList.hidden) return;
+    event.preventDefault();
+    const tag = visibleTags[activeTagIndex >= 0 ? activeTagIndex : 0];
+    if (tag) selectTag(tag.id);
+    return;
+  }
+
+  if (event.key === "Escape") {
+    closeTagList();
+    return;
+  }
+
+  if (event.key === "Backspace" && !tagSearch.value) {
+    const lastId = [...selectedTagIds].pop();
+    if (lastId) {
+      event.preventDefault();
+      removeTag(lastId);
+    }
+  }
+}
+
+function selectTag(id) {
+  selectedTagIds.add(id);
+  tagSearch.value = "";
+  activeTagIndex = -1;
+  renderChips();
+  openTagList();
+  tagSearch.focus();
+}
+
+function removeTag(id) {
+  selectedTagIds.delete(id);
+  renderChips();
+  if (!tagList.hidden) buildTagOptions();
 }
 
 function renderChips() {
@@ -141,12 +254,7 @@ function renderChips() {
     remove.type = "button";
     remove.textContent = "\u00d7";
     remove.setAttribute("aria-label", `Remove tag ${findTagTitle(id)}`);
-    remove.addEventListener("click", () => {
-      selectedTagIds.delete(id);
-      renderChips();
-      const box = tagList.querySelector(`input[value="${CSS.escape(id)}"]`);
-      if (box) box.checked = false;
-    });
+    remove.addEventListener("click", () => removeTag(id));
     chip.append(findTagTitle(id), remove);
     tagChips.append(chip);
   }
