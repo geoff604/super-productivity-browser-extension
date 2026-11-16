@@ -4,6 +4,7 @@ const selectionInput = document.getElementById("selection");
 const selectionChoice = document.querySelector('input[name="titleSource"][value="selection"]');
 const projectSelect = document.getElementById("project");
 const tagSearch = document.getElementById("tagSearch");
+const tagBox = document.getElementById("tagBox");
 const tagList = document.getElementById("tagList");
 const tagChips = document.getElementById("tagChips");
 const submitButton = document.getElementById("submit");
@@ -41,6 +42,9 @@ titleInput.addEventListener("keydown", (event) => {
   }
 });
 tagSearch.addEventListener("focus", openTagList);
+tagBox.addEventListener("click", (event) => {
+  if (event.target === tagBox || event.target === tagChips) tagSearch.focus();
+});
 tagSearch.addEventListener("input", () => {
   activeTagIndex = -1;
   openTagList();
@@ -171,7 +175,7 @@ function buildTagOptions() {
     option.className = index === activeTagIndex ? "choice active" : "choice";
     option.setAttribute("role", "option");
     option.setAttribute("aria-selected", String(index === activeTagIndex));
-    option.textContent = `# ${tagTitle(tag)}`;
+    option.textContent = `#${tagTitle(tag)}`;
     option.addEventListener("mousedown", (event) => {
       event.preventDefault();
       selectTag(tag.id);
@@ -255,7 +259,7 @@ function renderChips() {
     remove.textContent = "\u00d7";
     remove.setAttribute("aria-label", `Remove tag ${findTagTitle(id)}`);
     remove.addEventListener("click", () => removeTag(id));
-    chip.append(findTagTitle(id), remove);
+    chip.append(`#${findTagTitle(id)}`, remove);
     tagChips.append(chip);
   }
 }
