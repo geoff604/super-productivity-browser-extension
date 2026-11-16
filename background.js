@@ -109,9 +109,9 @@ async function createTask(taskInput) {
   };
 
   body.projectId = taskInput.projectId || INBOX_PROJECT_ID;
-  if (Array.isArray(taskInput.tagIds) && taskInput.tagIds.length > 0) {
-    body.tagIds = taskInput.tagIds;
-  }
+  // Always send tagIds, even when empty, so the app does not fall back to the
+  // tag currently selected in its sidebar.
+  body.tagIds = Array.isArray(taskInput.tagIds) ? taskInput.tagIds : [];
 
   return apiRequest("/tasks", {
     method: "POST",
