@@ -293,7 +293,7 @@ async function submitTask() {
       task: {
         title,
         url: pageUrl,
-        selectedText: selectionInput.value.trim(),
+        selectedText: selectionChoice.checked ? "" : selectionInput.value.trim(),
         projectId: projectSelect.value,
         tagIds
       }

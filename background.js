@@ -92,9 +92,10 @@ async function createTaskFromContext(info, tab) {
 
   const selection = typeof info.selectionText === "string" ? info.selectionText.trim() : "";
   const task = {
+    // The selection already becomes the title, so do not also quote it in the notes.
     title: selection || title,
     url: pageUrl,
-    selectedText: selection
+    selectedText: ""
   };
   await createTask(task);
   setTabFeedback(tab?.id, true, "Task added to Super Productivity.");
