@@ -1,8 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Super Productivity Page Clipper",
+  "name": "Page Clipper for Super Productivity",
   "version": "1.0.0",
-  "description": "Clip the current page into Super Productivity.",
+  "description": "Unofficial. Clip the current page into the Super Productivity desktop app.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "permissions": [
     "activeTab",
     "scripting",
@@ -18,7 +23,12 @@
   },
   "action": {
     "default_title": "Add page to Super Productivity",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "options_page": "options.html",
   "commands": {

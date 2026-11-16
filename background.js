@@ -2,7 +2,7 @@
 // activeTab grants access to the page only after the user invokes the action or context menu.
 // scripting reads selected text from that granted tab; no content script makes network requests.
 // contextMenus adds the requested page, link, and selection menu item.
-// storage reads the locally saved token and optional default project ID.
+// storage reads the locally saved access token.
 // declarativeNetRequest removes Origin only from this extension's API requests, which the app rejects otherwise.
 // host_permissions is limited to the Super Productivity loopback REST API.
 
@@ -245,12 +245,18 @@ function serializeError(error) {
   if (error instanceof RuleSetupError) {
     return { code: error.code, message: error.message };
   }
-  return { code: "NETWORK_OR_TIMEOUT", message: getErrorMessage(error) };
+  if (error instanceof NetworkError) {
+    return { code: "NETWORK_OR_TIMEOUT", message: getErrorMessage(error) };
+  }
+  return { code: "UNKNOWN", message: getErrorMessage(error) };
 }
 
 function getErrorMessage(error) {
   if (error instanceof ApiError && error.status === 401) {
     return "Token missing or wrong; copy it from Settings -> Misc.";
+  }
+  if (error instanceof ApiError && error.code === "FORBIDDEN") {
+    return "The app rejected the request. Super Productivity may have changed its API; check for an extension update.";
   }
   if (error instanceof ApiError) return `${error.code}: ${error.message}`;
   if (error instanceof NetworkError) {

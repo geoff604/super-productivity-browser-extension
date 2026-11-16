@@ -198,9 +198,13 @@ function formatError(error) {
   if (error?.code === "UNAUTHORIZED" || error?.status === 401) {
     return "Token missing or wrong; copy it from Settings -> Misc.";
   }
+  if (error?.code === "FORBIDDEN") {
+    return "The app rejected the request. Super Productivity may have changed its API; check for an extension update.";
+  }
   if (error?.code === "NETWORK_OR_TIMEOUT") {
     return "Super Productivity isn't running, or the local REST API is off (Settings -> Misc).";
   }
+  if (error?.code === "UNKNOWN") return error.message || "Something went wrong.";
   if (error?.code && error?.message) return `${error.code}: ${error.message}`;
   return "Super Productivity isn't running, or the local REST API is off (Settings -> Misc).";
 }
