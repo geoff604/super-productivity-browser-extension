@@ -2,7 +2,7 @@
 
 An unofficial Chrome extension that adds the current tab to your Super Productivity task list in one click.
 
-> Not affiliated with, endorsed by, or supported by Super Productivity or its author, Johannes Millan.
+> Not affiliated with, endorsed by, or supported by Super Productivity
 
 ## What it does
 
