@@ -10,6 +10,7 @@ const API_BASE = "http://127.0.0.1:3876";
 const REQUEST_TIMEOUT_MS = 10000;
 const MENU_ID = "add-to-super-productivity";
 const ORIGIN_RULE_ID = 1;
+const INBOX_PROJECT_ID = "INBOX_PROJECT";
 let originRulePromise;
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -100,7 +101,7 @@ async function createTask(taskInput) {
     isIgnoreShortSyntax: true
   };
 
-  if (taskInput.projectId) body.projectId = taskInput.projectId;
+  body.projectId = taskInput.projectId || INBOX_PROJECT_ID;
   if (Array.isArray(taskInput.tagIds) && taskInput.tagIds.length > 0) {
     body.tagIds = taskInput.tagIds;
   }
