@@ -30,6 +30,12 @@ selectionInput.addEventListener("input", () => {
 });
 
 submitButton.addEventListener("click", submitTask);
+titleInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.isComposing) {
+    event.preventDefault();
+    submitTask();
+  }
+});
 tagSearch.addEventListener("input", renderTags);
 
 async function initialize() {
@@ -56,13 +62,16 @@ async function initialize() {
     selectionChoice.disabled = true;
   }
 
-  const projects = await sendMessage({ type: "GET_PROJECTS" });
-  if (!projects.ok) {
-    showError(formatError(projects.error));
+  const [projects] = await Promise.all([
+    sendMessage({ type: "GET_PROJECTS" }).catch((error) => ({ ok: false, error })),
+    loadTags()
+  ]);
+
+  if (!projects?.ok) {
+    showError(formatError(projects?.error));
     return;
   }
   fillProjects(projects.data);
-  await loadTags();
 }
 
 function fillProjects(projects) {
@@ -153,6 +162,8 @@ function findTagTitle(id) {
 }
 
 async function submitTask() {
+  if (submitButton.disabled) return;
+
   const title = titleInput.value.trim();
   if (!title) {
     showError("Enter a task title.");

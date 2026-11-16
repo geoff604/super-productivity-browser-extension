@@ -7,7 +7,7 @@
     <style>
       body { width: 360px; margin: 0; padding: 10px 16px; font: 14px Arial, sans-serif; color: #202124; }
       h1 { margin: 0 0 6px; font-size: 16px; }
-      label, legend { display: block; margin: 6px 0 3px; font-weight: 600; }
+      label, legend, .url-label { display: block; margin: 6px 0 3px; font-weight: 600; }
       input, textarea, select, button { box-sizing: border-box; width: 100%; font: inherit; }
       input, textarea, select { padding: 8px; border: 1px solid #9aa0a6; border-radius: 4px; }
       textarea { min-height: 52px; resize: vertical; }
@@ -33,7 +33,7 @@
     <input id="title" type="text" required>
 
     <div>
-      <label>Page URL</label>
+      <div class="url-label">Page URL</div>
       <div id="url" class="url"></div>
     </div>
 

@@ -14,10 +14,16 @@ const INBOX_PROJECT_ID = "INBOX_PROJECT";
 let originRulePromise;
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: MENU_ID,
-    title: "Add to Super Productivity",
-    contexts: ["page", "link", "selection"]
+  // Recreate the menu so an update never trips over the previous installation's item.
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: MENU_ID,
+      title: "Add to Super Productivity",
+      contexts: ["page", "link", "selection"]
+    }, () => {
+      // Reading lastError keeps a failed recreate from being reported as unchecked.
+      chrome.runtime.lastError;
+    });
   });
   ensureOriginRule().catch((error) => setGlobalFeedback(false, error.message));
 });
@@ -73,6 +79,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  sendResponse({ ok: false, error: serializeError(new Error("Unsupported message.")) });
   return false;
 });
 
@@ -155,9 +162,19 @@ async function apiRequest(path, { method = "GET", token = "", body, authenticate
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: controller.signal
     });
-    const envelope = await response.json();
+    const text = await response.text();
+    let envelope;
+    let unreadable = false;
 
-    if (!response.ok || envelope?.ok !== true) {
+    if (text.trim()) {
+      try {
+        envelope = JSON.parse(text);
+      } catch {
+        unreadable = true;
+      }
+    }
+
+    if (!response.ok) {
       const apiError = envelope?.error;
       throw new ApiError(
         redactToken(apiError?.code || `HTTP_${response.status}`, token),
@@ -166,7 +183,24 @@ async function apiRequest(path, { method = "GET", token = "", body, authenticate
       );
     }
 
-    return envelope.data;
+    if (unreadable) {
+      throw new ApiError(
+        "INVALID_RESPONSE",
+        `The app returned a response the extension could not read (HTTP ${response.status}).`,
+        response.status
+      );
+    }
+
+    if (envelope && envelope.ok !== true) {
+      const apiError = envelope.error;
+      throw new ApiError(
+        redactToken(apiError?.code || `HTTP_${response.status}`, token),
+        redactToken(apiError?.message || `Request failed with HTTP ${response.status}.`, token),
+        response.status
+      );
+    }
+
+    return envelope?.data;
   } catch (error) {
     if (error instanceof ApiError) throw error;
     throw new NetworkError();
@@ -221,9 +255,9 @@ function redactToken(message, token) {
 }
 
 function isTaskInput(task) {
-  return task && typeof task.title === "string" && task.title.trim().length > 0 &&
+  return Boolean(task) && typeof task.title === "string" && task.title.trim().length > 0 &&
     typeof task.url === "string" && typeof task.selectedText === "string" &&
-    typeof task.projectId === "string";
+    (task.projectId === undefined || task.projectId === null || typeof task.projectId === "string");
 }
 
 function setTabFeedback(tabId, success, message) {
