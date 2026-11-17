@@ -1,6 +1,6 @@
 # Add Task to Super Productivity
 
-An unofficial Chrome extension that adds the current tab to your Super Productivity task list in one click.
+An unofficial browser extension for Chrome and Firefox that adds the current tab to your Super Productivity task list in one click.
 
 > Not affiliated with, endorsed by, or supported by Super Productivity
 
@@ -12,7 +12,28 @@ Adds the current tab as a task in the Super Productivity app. The task gets the 
 
 - The Super Productivity desktop app, installed and running.
 - The app's local REST API turned on.
-- Chrome.
+- Chrome, or Firefox 140 or later.
+
+## Build
+
+The extension is plain JavaScript with no dependencies. `src/` holds the shared runtime files and `manifests/` holds one manifest per browser.
+
+```bash
+node scripts/build.mjs
+```
+
+This writes `dist/chrome/` and `dist/firefox/`. Each folder contains the shared files plus its own `manifest.json`, ready to load or package.
+
+### Load the build
+
+- **Chrome:** open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and select `dist/chrome`.
+- **Firefox:** open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and select `dist/firefox/manifest.json`.
+
+To validate the Firefox package before submitting it:
+
+```bash
+npx web-ext lint --source-dir dist/firefox
+```
 
 ## Setup
 
@@ -47,7 +68,21 @@ The page title and selected text are only ever sent to the app on your own compu
 
 ## Why the extension changes a request header
 
-The extension uses the `declarativeNetRequestWithHostAccess` permission for a narrow header rule. The app's API rejects browser requests with an `Origin` header, so the extension removes only the `Origin` header, and only for its own requests to `http://127.0.0.1:3876/`. Nothing else about the request is changed, and the rule applies to this extension only.
+The extension has to remove the `Origin` header because the app's API rejects browser requests that include it. The two browsers need different mechanisms:
+
+- **Chrome** uses the `declarativeNetRequestWithHostAccess` permission for a rule scoped to this extension's own requests to `http://127.0.0.1:3876/`.
+- **Firefox** uses the `webRequest` and `webRequestBlocking` permissions with a listener that removes `Origin` from any request to `http://127.0.0.1:3876/`. Firefox does not reliably identify this extension's own background requests there, so the listener cannot be scoped to them; it is still limited to that one local URL.
+
+Nothing else about the request is changed, and neither mechanism applies to requests from ordinary web pages.
+
+## Project layout
+
+```text
+src/                 shared runtime files (background, popup, options, icons)
+manifests/           chrome.json and firefox.json
+scripts/build.mjs    copies src/ into dist/chrome and dist/firefox
+dist/                generated packages (not committed)
+```
 
 ## Known limits
 

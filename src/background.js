@@ -3,15 +3,47 @@
 // scripting reads selected text from that granted tab; no content script makes network requests.
 // contextMenus adds the requested page, link, and selection menu item.
 // storage reads the locally saved access token.
-// declarativeNetRequestWithHostAccess removes Origin only from this extension's API requests, which the app rejects otherwise.
+// Chrome uses declarativeNetRequestWithHostAccess to remove Origin from its loopback API requests.
+// Firefox uses a blocking webRequest listener instead, because DNR does not reliably match
+// extension background fetches there; that listener covers all requests to the local API URL.
 // host_permissions is limited to the Super Productivity loopback REST API.
 
 const API_BASE = "http://127.0.0.1:3876";
+const API_HOST_PERMISSION = "http://127.0.0.1/*";
 const REQUEST_TIMEOUT_MS = 10000;
 const MENU_ID = "add-to-super-productivity";
 const ORIGIN_RULE_ID = 1;
 const INBOX_PROJECT_ID = "INBOX_PROJECT";
+// Chrome exposes chrome-extension://<id>/ and Firefox moz-extension://<uuid>/.
+// This hostname is what the browser matches against initiatorDomains.
+const EXTENSION_HOST = new URL(chrome.runtime.getURL("")).hostname;
+const IS_FIREFOX = chrome.runtime.getURL("").startsWith("moz-extension:");
 let originRulePromise;
+let legacyRuleCleanupPromise;
+
+if (IS_FIREFOX) {
+  // Firefox does not reliably apply the DNR modifyHeaders rule to
+  // extension-originated fetches, so remove Origin with webRequest instead.
+  // The listener deliberately does not filter by initiator: Firefox reports
+  // this extension's background fetches inconsistently (originUrl, tabId),
+  // so every request to the local API URL is covered.
+  // Firefox match patterns do not support port numbers, so the filter covers
+  // loopback and the listener checks the API port itself.
+  chrome.webRequest.onBeforeSendHeaders.addListener(
+    (details) => {
+      if (!details.url.startsWith(`${API_BASE}/`)) return {};
+      if (!details.requestHeaders) return {};
+
+      return {
+        requestHeaders: details.requestHeaders.filter(
+          (header) => header.name.toLowerCase() !== "origin"
+        )
+      };
+    },
+    { urls: ["http://127.0.0.1/*"] },
+    ["blocking", "requestHeaders"]
+  );
+}
 
 chrome.runtime.onInstalled.addListener(() => {
   // Recreate the menu so an update never trips over the previous installation's item.
@@ -149,6 +181,19 @@ async function testConnection() {
 
 async function apiRequest(path, { method = "GET", token = "", body, authenticate = true } = {}) {
   await ensureOriginRule();
+
+  if (IS_FIREFOX) {
+    // Firefox treats host permissions as revocable, so confirm access before
+    // fetching; otherwise the CORS failure is reported as "not running".
+    let hasHostAccess = true;
+    try {
+      hasHostAccess = await chrome.permissions.contains({ origins: [API_HOST_PERMISSION] });
+    } catch {
+      // Fall through to the fetch so a permissions API hiccup is not fatal.
+    }
+    if (!hasHostAccess) throw new PermissionError();
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   const headers = { Accept: "application/json" };
@@ -211,6 +256,13 @@ async function apiRequest(path, { method = "GET", token = "", body, authenticate
 }
 
 function ensureOriginRule() {
+  if (IS_FIREFOX) {
+    // Remove any DNR rule installed by an earlier build; the webRequest
+    // listener above now handles Firefox.
+    legacyRuleCleanupPromise ??= clearLegacyOriginRule();
+    return legacyRuleCleanupPromise;
+  }
+
   if (!originRulePromise) {
     originRulePromise = (async () => {
       const currentRules = await chrome.declarativeNetRequest.getDynamicRules();
@@ -226,7 +278,7 @@ function ensureOriginRule() {
           },
           condition: {
             urlFilter: "|http://127.0.0.1:3876/",
-            initiatorDomains: [chrome.runtime.id],
+            initiatorDomains: [EXTENSION_HOST],
             resourceTypes: ["xmlhttprequest"]
           }
         }]
@@ -237,6 +289,16 @@ function ensureOriginRule() {
     });
   }
   return originRulePromise;
+}
+
+async function clearLegacyOriginRule() {
+  try {
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: [ORIGIN_RULE_ID]
+    });
+  } catch {
+    // Firefox no longer grants the DNR permission, so there is nothing to clean up.
+  }
 }
 
 function makeNotes(url, selectedText, token) {
@@ -281,6 +343,9 @@ function serializeError(error) {
   if (error instanceof RuleSetupError) {
     return { code: error.code, message: error.message };
   }
+  if (error instanceof PermissionError) {
+    return { code: error.code, message: error.message };
+  }
   if (error instanceof NetworkError) {
     return { code: "NETWORK_OR_TIMEOUT", message: getErrorMessage(error) };
   }
@@ -295,6 +360,7 @@ function getErrorMessage(error) {
     return "The app rejected the request. Super Productivity may have changed its API; check for an extension update.";
   }
   if (error instanceof ApiError) return `${error.code}: ${error.message}`;
+  if (error instanceof PermissionError) return error.message;
   if (error instanceof NetworkError) {
     return "Super Productivity isn't running, or the local REST API is off (Settings -> Misc).";
   }
@@ -317,11 +383,19 @@ class NetworkError extends Error {
   }
 }
 
+class PermissionError extends Error {
+  constructor() {
+    super("Firefox has not granted this extension access to 127.0.0.1. Open the options page and click Grant access, or enable it in about:addons -> this extension -> Permissions.");
+    this.name = "PermissionError";
+    this.code = "HOST_PERMISSION_MISSING";
+  }
+}
+
 class RuleSetupError extends Error {
   constructor(detail) {
     super(detail
-      ? `Chrome could not install the narrowly scoped local API request rule: ${detail}`
-      : "Chrome could not install the narrowly scoped local API request rule.");
+      ? `The extension could not install the narrowly scoped local API request rule: ${detail}`
+      : "The extension could not install the narrowly scoped local API request rule.");
     this.name = "RuleSetupError";
     this.code = "ORIGIN_RULE_SETUP_FAILED";
   }

@@ -1,9 +1,21 @@
 {
   "manifest_version": 3,
   "name": "Add Task to Super Productivity",
-  "version": "1.0.0",
-  "minimum_chrome_version": "101",
+  "version": "1.1.0",
   "description": "Unofficial. Adds the current tab as a task in the Super Productivity app.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "add-task-to-super-productivity@sravan.dev",
+      "strict_min_version": "1.1.0",
+      "data_collection_permissions": {
+        "required": [
+          "authenticationInfo",
+          "browsingActivity",
+          "websiteContent"
+        ]
+      }
+    }
+  },
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -14,13 +26,16 @@
     "scripting",
     "contextMenus",
     "storage",
-    "declarativeNetRequestWithHostAccess"
+    "webRequest",
+    "webRequestBlocking"
   ],
   "host_permissions": [
-    "http://127.0.0.1:3876/*"
+    "http://127.0.0.1/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "scripts": [
+      "background.js"
+    ]
   },
   "action": {
     "default_title": "Add page to Super Productivity",
@@ -31,7 +46,10 @@
       "128": "icons/icon128.png"
     }
   },
-  "options_page": "options.html",
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "commands": {
     "_execute_action": {
       "suggested_key": {

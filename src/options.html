@@ -12,6 +12,7 @@
       button { margin-top: 16px; border: 0; border-radius: 4px; background: #1967d2; color: white; cursor: pointer; }
       #status { min-height: 20px; margin-top: 14px; white-space: pre-wrap; }
       .hint { color: #5f6368; }
+      .warn { color: #b3261e; }
     </style>
   </head>
   <body>
@@ -19,6 +20,10 @@
     <label for="token">Access token</label>
     <input id="token" type="password" autocomplete="off">
     <p class="hint">Copy the token from Super Productivity: Settings → Misc → Access Token. It is stored only in this browser profile's local extension storage.</p>
+
+    <p id="permission-warning" class="warn" hidden>Firefox has not granted this extension access to 127.0.0.1, so it cannot reach the local REST API.</p>
+    <p id="permission-help" class="hint" hidden>If access is off, enable "Access your data for http://127.0.0.1" in about:addons -> this extension -> Permissions and data.</p>
+    <button id="grant" type="button" hidden>Grant access</button>
 
     <button id="save" type="button">Save</button>
     <button id="test" type="button">Test connection</button>

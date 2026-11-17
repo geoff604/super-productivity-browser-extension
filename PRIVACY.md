@@ -1,16 +1,16 @@
 # Privacy Policy: Add Task to Super Productivity
 
-Last updated: 2026-11-16
+Last updated: 2026-11-17
 
 Short version: this extension sends your data only to the Super Productivity app on your own computer. Nothing goes to the developer or to any third party.
 
 ## What it stores
 
-The extension stores exactly one key in `chrome.storage.local`:
+The extension stores exactly one key in the extension's local storage (`chrome.storage.local` in Chrome, `browser.storage.local` in Firefox):
 
 - **`accessToken`** — the Super Productivity access token you paste on the Options page.
 
-`chrome.storage.local` is this browser profile's local extension storage. It is not synced to other devices. The extension does not encrypt the token; it is stored as you entered it.
+That storage is this browser profile's local extension storage. It is not synced to other devices. The extension does not encrypt the token; it is stored as you entered it.
 
 There are no other saved keys. The extension keeps no history, no settings, and no statistics.
 
@@ -19,7 +19,7 @@ You can remove the token at any time by clearing the field on the Options page a
 ## What it reads
 
 - **The active tab's title and URL**, when you open the popup.
-- **The text you have selected on the page**, when you open the popup. This only works on pages where Chrome allows it.
+- **The text you have selected on the page**, when you open the popup. This only works on pages where the browser allows it.
 - **The page URL, page title, and selected text**, when you use the right-click menu item.
 - **Project and tag lists**, read from the local API so you can pick them.
 
@@ -27,6 +27,16 @@ You can remove the token at any time by clearing the field on the Options page a
 
 - **Popup:** the title is the page title, or the selected text if you choose **Selected text** as the title source; you can edit it before saving. The notes are the page URL. If **Page title** is the title source and the **Selected text** box has text, that text is appended to the notes, quoted line by line with `>`.
 - **Right-click:** the title is the selected text if there is any, otherwise the page title. The notes are the page URL, or the link URL if you right-clicked a link. A right-clicked selection is not repeated in the notes.
+
+## Firefox data collection declaration
+
+Firefox requires extensions to declare data transmission in `manifest.json`. This extension declares:
+
+- **Authentication information** — the access token.
+- **Browsing activity** — the page URL.
+- **Website content** — the page title and selected text.
+
+All of it is sent only to the local Super Productivity app at `127.0.0.1:3876`, as described above.
 
 ## Where your data goes
 
@@ -61,8 +71,9 @@ What Super Productivity does with a task after it is saved, including any sync y
 | `scripting` | Read the text you have selected on the page. |
 | `contextMenus` | Add the **Add to Super Productivity** right-click item, which appears for pages, links, and selections. |
 | `storage` | Save your access token locally. |
-| `declarativeNetRequestWithHostAccess` | Remove the `Origin` header from this extension's own requests to the local API. |
-| Host: `http://127.0.0.1:3876/*` | Talk to the local API and nothing else. |
+| `declarativeNetRequestWithHostAccess` (Chrome) | Remove the `Origin` header from this extension's own requests to the local API. |
+| `webRequest`, `webRequestBlocking` (Firefox) | Remove the `Origin` header from requests to the local API. Firefox cannot reliably scope this to the extension's own requests, so it applies to the local API URL only. |
+| Host: `http://127.0.0.1:3876/*` (Chrome) / `http://127.0.0.1/*` (Firefox) | Talk to the local API and nothing else. Firefox match patterns do not support ports, so the extension checks for port 3876 in code. |
 
 ## Changes to this policy
 
