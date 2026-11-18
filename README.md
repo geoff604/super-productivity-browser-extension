@@ -2,8 +2,6 @@
 
 An unofficial browser extension for Chrome and Firefox that adds the current tab to your Super Productivity task list in one click.
 
-> Not affiliated with, endorsed by, or supported by Super Productivity
-
 ## What it does
 
 Adds the current tab as a task in the Super Productivity app. The task gets the page title, the page URL in its notes, and optionally the text you selected. You can choose a project and tags before saving.
