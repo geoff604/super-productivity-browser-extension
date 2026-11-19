@@ -1,4 +1,4 @@
-# Add Task to Super Productivity
+# Web Clipper for Super Productivity
 
 An unofficial browser extension for Chrome and Firefox that adds the current tab to your Super Productivity task list in one click.
 

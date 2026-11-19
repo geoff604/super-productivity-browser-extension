@@ -1,4 +1,4 @@
-# Privacy Policy: Add Task to Super Productivity
+# Privacy Policy: Web Clipper for Super Productivity
 
 Last updated: 2026-11-17
 
