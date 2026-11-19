@@ -71,7 +71,7 @@ The extension has to remove the `Origin` header because the app's API rejects br
 - **Chrome** uses the `declarativeNetRequestWithHostAccess` permission for a rule scoped to this extension's own requests to `http://127.0.0.1:3876/`.
 - **Firefox** uses the `webRequest` and `webRequestBlocking` permissions with a listener that removes `Origin` from any request to `http://127.0.0.1:3876/`. Firefox does not reliably identify this extension's own background requests there, so the listener cannot be scoped to them; it is still limited to that one local URL.
 
-Nothing else about the request is changed, and neither mechanism applies to requests from ordinary web pages.
+Nothing else about the request is changed. On Chrome the rule applies only to this extension's own requests. On Firefox it applies to any request to that local URL, including requests from web pages. The API still requires the access token.
 
 ## Project layout
 
