@@ -48,7 +48,7 @@ async function requestHostAccess() {
   }
 
   showStatus(
-    "Firefox did not grant access. Open about:addons -> Add Task to Super Productivity -> Permissions and data, and allow access to 127.0.0.1.",
+    "Firefox did not grant access. Open about:addons -> Web Clipper for Super Productivity -> Permissions and data, and allow access to 127.0.0.1.",
     false
   );
 }
