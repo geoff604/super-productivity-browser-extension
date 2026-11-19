@@ -40,7 +40,7 @@ function buildAll() {
 
     const zipPath = join(
       distDir,
-      `add-task-to-super-productivity-${browser}-v${manifest.version}.zip`
+      `web-clipper-for-super-productivity-${browser}-v${manifest.version}.zip`
     );
     writeZip(zipPath, outDir);
 
