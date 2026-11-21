@@ -14,6 +14,12 @@ const REQUEST_TIMEOUT_MS = 10000;
 const MENU_ID = "add-to-super-productivity";
 const ORIGIN_RULE_ID = 1;
 const INBOX_PROJECT_ID = "INBOX_PROJECT";
+// Super Productivity priorities: 1 = Low, 2 = Medium, 3 = High.
+const HIGH_PRIORITY = 3;
+const PRIORITY_PLACEHOLDER_TITLE = "Web Clipper task p1";
+const PRIORITY_WAIT_MS = 2000;
+const PRIORITY_POLL_MS = 150;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 // Chrome exposes chrome-extension://<id>/ and Firefox moz-extension://<uuid>/.
 // This hostname is what the browser matches against initiatorDomains.
 const EXTENSION_HOST = new URL(chrome.runtime.getURL("")).hostname;
@@ -84,13 +90,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "GET_TAGS") {
-    getTags()
-      .then((result) => sendResponse({ ok: true, data: result }))
-      .catch((error) => sendResponse({ ok: false, error: serializeError(error) }));
-    return true;
-  }
-
   if (message?.type === "TEST_CONNECTION") {
     testConnection()
       .then(sendResponse)
@@ -135,9 +134,15 @@ async function createTaskFromContext(info, tab) {
 
 async function createTask(taskInput) {
   const settings = await chrome.storage.local.get(["accessToken"]);
+  const token = settings.accessToken || "";
+  const title = taskInput.title.trim();
   const body = {
-    title: taskInput.title.trim(),
-    notes: makeNotes(taskInput.url, taskInput.selectedText, settings.accessToken || ""),
+    title,
+    // The popup sends the note exactly as the user edited it; the context
+    // menu sends the URL and selection for the extension to format.
+    notes: typeof taskInput.notes === "string"
+      ? redactToken(taskInput.notes, token)
+      : makeNotes(taskInput.url || "", taskInput.selectedText || "", token),
     isIgnoreShortSyntax: true
   };
 
@@ -145,22 +150,74 @@ async function createTask(taskInput) {
   // Always send tagIds, even when empty, so the app does not fall back to the
   // tag currently selected in its sidebar.
   body.tagIds = Array.isArray(taskInput.tagIds) ? taskInput.tagIds : [];
+  if (taskInput.deadlineDay) body.deadlineDay = taskInput.deadlineDay;
 
-  return apiRequest("/tasks", {
-    method: "POST",
-    token: settings.accessToken || "",
-    body
-  });
+  if (taskInput.isHighPriority) body.priority = HIGH_PRIORITY;
+
+  const task = await apiRequest("/tasks", { method: "POST", token, body });
+  if (!taskInput.isHighPriority || isHighPriority(task?.priority)) {
+    return { task, priorityApplied: true };
+  }
+  // This app version drops `priority`; fall back to short syntax.
+  return setHighPriorityViaShortSyntax(task, title, token);
+}
+
+// App versions whose REST API ignores `priority` still parse priority short
+// syntax. Rename the task to a placeholder ending in "p1" (parsed), so the real
+// title never goes through short syntax. The app parses asynchronously, so
+// wait until it has stripped the token, then restore the real title literally.
+async function setHighPriorityViaShortSyntax(task, title, token) {
+  if (!task?.id) return { task, priorityApplied: false };
+  const taskPath = `/tasks/${encodeURIComponent(task.id)}`;
+
+  try {
+    await apiRequest(taskPath, {
+      method: "PATCH",
+      token,
+      body: { title: PRIORITY_PLACEHOLDER_TITLE }
+    });
+  } catch {
+    // The task already has its real title; it just has no priority.
+    return { task, priorityApplied: false };
+  }
+
+  let priorityApplied = false;
+  const deadline = Date.now() + PRIORITY_WAIT_MS;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, PRIORITY_POLL_MS));
+    try {
+      const current = await apiRequest(taskPath, { token });
+      priorityApplied = isHighPriority(current?.priority);
+      // Parsing is done once the token is gone from the title.
+      if (current?.title !== PRIORITY_PLACEHOLDER_TITLE) break;
+    } catch {
+      // Stop waiting, but still restore the real title below.
+      break;
+    }
+  }
+
+  try {
+    const restored = await apiRequest(taskPath, {
+      method: "PATCH",
+      token,
+      body: { title, isIgnoreShortSyntax: true }
+    });
+    return { task: restored, priorityApplied };
+  } catch (error) {
+    throw new Error(
+      `The task was created, but its title could not be restored (${getErrorMessage(error)}). ` +
+      "Rename it in Super Productivity."
+    );
+  }
+}
+
+function isHighPriority(priority) {
+  return priority === HIGH_PRIORITY || priority === "high";
 }
 
 async function getProjects() {
   const settings = await chrome.storage.local.get(["accessToken"]);
   return apiRequest("/projects", { token: settings.accessToken || "" });
-}
-
-async function getTags() {
-  const settings = await chrome.storage.local.get(["accessToken"]);
-  return apiRequest("/tags", { token: settings.accessToken || "" });
 }
 
 async function testConnection() {
@@ -318,9 +375,14 @@ function redactToken(message, token) {
 }
 
 function isTaskInput(task) {
+  const isOptional = (value, type) => value === undefined || value === null || typeof value === type;
   return Boolean(task) && typeof task.title === "string" && task.title.trim().length > 0 &&
-    typeof task.url === "string" && typeof task.selectedText === "string" &&
-    (task.projectId === undefined || task.projectId === null || typeof task.projectId === "string");
+    isOptional(task.notes, "string") &&
+    isOptional(task.url, "string") && isOptional(task.selectedText, "string") &&
+    isOptional(task.projectId, "string") &&
+    isOptional(task.isHighPriority, "boolean") &&
+    (task.deadlineDay === undefined || task.deadlineDay === null || task.deadlineDay === "" ||
+      (typeof task.deadlineDay === "string" && DATE_RE.test(task.deadlineDay)));
 }
 
 function setTabFeedback(tabId, success, message) {
