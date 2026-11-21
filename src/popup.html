@@ -64,6 +64,14 @@
       .row { display: flex; align-items: center; margin-bottom: 8px; }
       .top-row { justify-content: space-between; margin-top: 16px; }
 
+      /* Enlarge the Project label's hit area so focusing the dropdown is easy,
+         without shifting layout. Bottom stays short of the star row below. */
+      label[for="project"] { position: relative; cursor: pointer; }
+      label[for="project"]::after {
+        content: ""; position: absolute;
+        top: -16px; bottom: -12px; left: -12px; right: -7px;
+      }
+
       /* Project dropdown with type-to-search */
       .smart-search-wrapper { position: relative; display: inline-block; }
       #project { min-width: 260px; max-width: 380px; }
